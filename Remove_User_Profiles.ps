@@ -1,0 +1,42 @@
+# Powershell script that will remove all local user profiles.
+#
+# Copyright 2023 Robert Crowe
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the Apache License as published by
+# the Apache Foundation, either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# Apache License for more details.
+#
+# You should have received a copy of the Apache License
+# along with this program.  If not, see <https://apache.org/licenses/>.
+
+# Variables for the admin account and path to user profiles
+$adminUsername = "Administrator"
+$adminPassword = ConvertTo-SecureString "12345" -AsPlainText -Force
+$userProfilePath = "C:\Users"
+
+# Check if running as admin
+if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
+{
+    Write-Output "Script must be run as administrator. Relaunching with elevated permissions..."
+    Start-Process PowerShell.exe "-File `"$PSCommandPath`" -Verb RunAs" -NoNewWindow -Wait
+    Exit
+}
+
+# Get a list of all user profiles, excluding the local admin
+$userProfiles = Get-ChildItem $userProfilePath | Where-Object { $_.Name -ne $adminUsername }
+
+# Loop through the user profiles and delete them
+foreach ($userProfile in $userProfiles)
+{
+    Write-Output "Deleting profile for $($userProfile.Name)..."
+    Remove-Item "$($userProfile.FullName)\*" -Recurse -Force
+    Remove-Item $userProfile.FullName -Force
+}
+
+Write-Output "All user profiles have been deleted."
